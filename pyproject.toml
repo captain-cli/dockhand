@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dockhand"
+version = "0.1.0"
+description = "Project-agnostic runtime port allocation and environment wiring utility."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Captain CLI" }]
+license = { text = "MIT" }
+keywords = ["ports", "env", "cli", "runtime", "developer-tools"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.optional-dependencies]
+db = ["mysql-connector-python>=8.0"]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+dockhand = "dockhand.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,30 @@
+{
+  "projectName": "crispy-metadata-enrichment",
+  "defaults": {
+    "startPort": 41000,
+    "endPort": 41999,
+    "host": "0.0.0.0",
+    "protocol": "tcp",
+    "envFile": "./.env",
+    "reservedPortsFile": "./config/reserved-ports.json",
+    "writeEnv": true
+  },
+  "applications": [
+    {
+      "applicationName": "metadata-api",
+      "settingName": "port",
+      "settingDescription": "Metadata enrichment API HTTP port"
+    },
+    {
+      "applicationName": "video-analysis",
+      "settingName": "port",
+      "settingDescription": "Video analysis lane HTTP port"
+    },
+    {
+      "applicationName": "worker",
+      "settingName": "socketPort",
+      "envVar": "WORKER_SOCKET_PORT",
+      "settingDescription": "Worker socket listener port"
+    }
+  ]
+}

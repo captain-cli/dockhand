@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Runtime/local outputs
+.env
+*.env
+config/reserved-ports.json
+reserved-ports.json
+*.tmp
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
