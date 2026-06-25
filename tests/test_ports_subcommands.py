@@ -102,3 +102,28 @@ def test_legacy_batch_still_works(tmp_path: Path) -> None:
     result = run_cli("--applications-file", str(manifest), "--json")
     payload = json.loads(result.stdout)
     assert len(payload["results"]) == 2
+
+
+def test_ports_plan_reserves_ports_in_memory(tmp_path: Path) -> None:
+    manifest = write_manifest(tmp_path)
+    reserved = tmp_path / "reserved.json"
+    env_file = tmp_path / "batch.env"
+
+    result = run_cli(
+        "ports",
+        "plan",
+        "--config",
+        str(manifest),
+        "--reserved-ports-file",
+        str(reserved),
+        "--env-file",
+        str(env_file),
+        "--write-env",
+        "--json",
+    )
+
+    payload = json.loads(result.stdout)
+    ports = [item["port"] for item in payload["results"]]
+    assert ports == [45300, 45301]
+    assert not reserved.exists()
+    assert not env_file.exists()

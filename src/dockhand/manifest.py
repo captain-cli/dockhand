@@ -127,6 +127,7 @@ def run_batch(base_args: argparse.Namespace) -> List[Dict[str, Any]]:
     explicit_cli = get_explicit_cli_overrides(base_args)
 
     results: List[Dict[str, Any]] = []
+    dry_run_state_holder: Dict[str, Dict[str, object]] = {}
     for entry in manifest["applications"]:
         if not isinstance(entry, dict):
             fail("Each applications entry must be an object")
@@ -137,6 +138,8 @@ def run_batch(base_args: argparse.Namespace) -> List[Dict[str, Any]]:
         merged.update(explicit_cli)
         single_args = args_with_overrides(base_args, merged)
         single_args.applications_file = None
+        if bool(getattr(single_args, "dry_run", False)):
+            single_args.dry_run_state_holder = dry_run_state_holder
         results.append(allocate_single(single_args))
     return results
 
@@ -151,6 +154,7 @@ def validate_batch_config(base_args: argparse.Namespace) -> Dict[str, Any]:
 
     explicit_cli = get_explicit_cli_overrides(base_args)
     application_count = 0
+    dry_run_state_holder: Dict[str, Dict[str, object]] = {}
     for entry in manifest["applications"]:
         if not isinstance(entry, dict):
             fail("Each applications entry must be an object")
@@ -162,6 +166,7 @@ def validate_batch_config(base_args: argparse.Namespace) -> Dict[str, Any]:
         single_args = args_with_overrides(base_args, merged)
         single_args.applications_file = None
         single_args.dry_run = True
+        single_args.dry_run_state_holder = dry_run_state_holder
         allocate_single(single_args)
         application_count += 1
 

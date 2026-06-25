@@ -65,12 +65,33 @@ def allocate_single(args: argparse.Namespace) -> Dict[str, Any]:
 
     env_var_name = args.env_var or default_env_var_name(args.project_name, args.application_name, args.setting_name)
     reservation = reservation_key(args.project_name, args.application_name, args.setting_name)
-    reserved_ports = load_reserved_ports(args.reserved_ports_file)
+    dry_run = bool(getattr(args, "dry_run", False))
+    dry_run_state_holder = getattr(args, "dry_run_state_holder", None)
+
+    if dry_run and isinstance(dry_run_state_holder, dict):
+        state_key = str(args.reserved_ports_file)
+        if state_key not in dry_run_state_holder:
+            dry_run_state_holder[state_key] = load_reserved_ports(args.reserved_ports_file)
+        reserved_ports = dry_run_state_holder[state_key]
+    else:
+        reserved_ports = load_reserved_ports(args.reserved_ports_file)
+
     db_config = default_db_config_from_env(args.env_file, args) if args.enable_db else None
 
     port = find_available_port(args, reserved_ports, db_config, env_var_name, reservation)
 
-    dry_run = bool(getattr(args, "dry_run", False))
+    if dry_run and isinstance(dry_run_state_holder, dict):
+        reserve_port(
+            reserved_ports=reserved_ports,
+            key=reservation,
+            project_name=args.project_name,
+            application_name=args.application_name,
+            setting_name=args.setting_name,
+            port=port,
+            protocol=args.protocol,
+            description=args.setting_description,
+            env_var_name=env_var_name,
+        )
 
     if not dry_run:
         reserve_port(
