@@ -70,26 +70,29 @@ def allocate_single(args: argparse.Namespace) -> Dict[str, Any]:
 
     port = find_available_port(args, reserved_ports, db_config, env_var_name, reservation)
 
-    reserve_port(
-        reserved_ports=reserved_ports,
-        key=reservation,
-        project_name=args.project_name,
-        application_name=args.application_name,
-        setting_name=args.setting_name,
-        port=port,
-        protocol=args.protocol,
-        description=args.setting_description,
-        env_var_name=env_var_name,
-    )
-    save_reserved_ports(args.reserved_ports_file, reserved_ports)
+    dry_run = bool(getattr(args, "dry_run", False))
 
-    if args.write_env and args.env_file:
-        update_env_file(args.env_file, env_var_name, port)
+    if not dry_run:
+        reserve_port(
+            reserved_ports=reserved_ports,
+            key=reservation,
+            project_name=args.project_name,
+            application_name=args.application_name,
+            setting_name=args.setting_name,
+            port=port,
+            protocol=args.protocol,
+            description=args.setting_description,
+            env_var_name=env_var_name,
+        )
+        save_reserved_ports(args.reserved_ports_file, reserved_ports)
 
-    allow_firewall_port(args, port)
+        if args.write_env and args.env_file:
+            update_env_file(args.env_file, env_var_name, port)
 
-    if args.enable_db and db_config and not args.db_skip_write:
-        update_database_setting(db_config, args, str(port))
+        allow_firewall_port(args, port)
+
+        if args.enable_db and db_config and not args.db_skip_write:
+            update_database_setting(db_config, args, str(port))
 
     return {
         "projectName": args.project_name,
@@ -102,5 +105,6 @@ def allocate_single(args: argparse.Namespace) -> Dict[str, Any]:
         "reservedPortsFile": args.reserved_ports_file,
         "envFile": args.env_file,
         "databaseEnabled": args.enable_db,
-        "firewallOpened": args.open_firewall,
+        "firewallOpened": bool(args.open_firewall and not dry_run),
+        "dryRun": dry_run,
     }

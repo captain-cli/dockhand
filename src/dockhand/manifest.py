@@ -139,3 +139,30 @@ def run_batch(base_args: argparse.Namespace) -> List[Dict[str, Any]]:
         single_args.applications_file = None
         results.append(allocate_single(single_args))
     return results
+
+
+def validate_batch_config(base_args: argparse.Namespace) -> Dict[str, Any]:
+    """Validate a batch manifest and merged application arguments without writing outputs."""
+    manifest = load_applications_manifest(base_args.applications_file)
+    top_level = normalize_manifest_dict({k: v for k, v in manifest.items() if k != "applications" and k != "defaults"})
+    defaults = normalize_manifest_dict(manifest.get("defaults", {}) or {})
+    if not isinstance(defaults, dict):
+        fail("Manifest defaults must be an object")
+
+    explicit_cli = get_explicit_cli_overrides(base_args)
+    application_count = 0
+    for entry in manifest["applications"]:
+        if not isinstance(entry, dict):
+            fail("Each applications entry must be an object")
+        merged: Dict[str, Any] = {}
+        merged.update(top_level)
+        merged.update(defaults)
+        merged.update(normalize_manifest_dict(entry))
+        merged.update(explicit_cli)
+        single_args = args_with_overrides(base_args, merged)
+        single_args.applications_file = None
+        single_args.dry_run = True
+        allocate_single(single_args)
+        application_count += 1
+
+    return {"valid": True, "mode": "batch", "applicationCount": application_count}

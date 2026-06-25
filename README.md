@@ -678,3 +678,39 @@ Then your installer can consume:
 - `config/allocated-ports.json`
 
 This keeps project-specific application definitions in JSON and keeps the locator reusable across projects.
+
+## Ports subcommands
+
+Dockhand supports explicit subcommands for runtime port workflows. The legacy flat CLI remains available for compatibility.
+
+### Apply
+
+Allocate or reuse ports and write requested outputs such as reservation files, `.env` files, DB settings, and firewall rules.
+
+```bash
+dockhand ports apply --config examples/applications.json --json
+```
+
+### Plan
+
+Preview the same allocation decisions without writing reservation files, `.env` files, DB settings, or firewall rules.
+
+```bash
+dockhand ports plan --config examples/applications.json --json
+```
+
+### Validate
+
+Validate a Dockhand manifest and merged application settings.
+
+```bash
+dockhand ports validate --config examples/applications.json --json
+```
+
+### Legacy compatibility
+
+The original flat command still works:
+
+```bash
+dockhand --applications-file examples/applications.json --json
+```
