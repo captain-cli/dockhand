@@ -56,8 +56,6 @@ def update_env_file(env_file: str, env_var_name: str, port: int) -> None:
         updated.append(line)
 
     if not found:
-        if updated and updated[-1].strip():
-            updated.append("")
         updated.append(f"{env_var_name}={port}")
 
     tmp_path = path.with_suffix(path.suffix + ".tmp")

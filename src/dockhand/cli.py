@@ -7,6 +7,7 @@ import json
 import sys
 from typing import Callable
 
+from . import __version__
 from .allocator import allocate_single
 from .constants import (
     DEFAULT_DB_APP_COLUMN,
@@ -19,6 +20,7 @@ from .constants import (
     DEFAULT_START_PORT,
 )
 from .errors import PortAllocationError
+from .init_config import init_manifest
 from .manifest import run_batch, validate_batch_config
 from .output import fail
 
@@ -67,6 +69,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     output = parser.add_argument_group("output")
     output.add_argument("--json", action="store_true", help="Print JSON output instead of plain text.")
     output.add_argument("--quiet", action="store_true", help="Suppress warnings. The selected port is still printed.")
+    output.add_argument("--print-env", action="store_true", help="Print env assignments for selected ports instead of the default text output.")
 
 
 def build_legacy_parser() -> argparse.ArgumentParser:
@@ -74,13 +77,36 @@ def build_legacy_parser() -> argparse.ArgumentParser:
         prog="dockhand",
         description="Find an available port, reusing DB/env/file reservations before allocating a new one.",
     )
+    parser.add_argument("--version", action="version", version=f"dockhand {__version__}")
     add_common_arguments(parser)
     return parser
 
 
+def add_init_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--output", default="manifest/dockhand.json", help="Path to write the starter Dockhand manifest.")
+    parser.add_argument("--force", action="store_true", help="Overwrite an existing manifest.")
+    parser.add_argument("--project-name", default=None, help="Project name to place in the manifest. Defaults to the current directory name.")
+    parser.add_argument("--application-name", default="app", help="Starter application/service name.")
+    parser.add_argument("--setting-name", default="port", help="Starter setting name.")
+    parser.add_argument("--setting-description", default="Application HTTP port")
+    parser.add_argument("--start-port", type=int, default=41000)
+    parser.add_argument("--end-port", type=int, default=41999)
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--protocol", choices=["tcp", "udp"], default="tcp")
+    parser.add_argument("--env-file", default=".env")
+    parser.add_argument("--reserved-ports-file", default="config/reserved-ports.json")
+    parser.add_argument("--write-env", action="store_true", default=True)
+    parser.add_argument("--json", action="store_true")
+
+
 def build_ports_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="dockhand")
+    parser.add_argument("--version", action="version", version=f"dockhand {__version__}")
     subparsers = parser.add_subparsers(dest="resource")
+
+    init_parser = subparsers.add_parser("init", help="Create a starter Dockhand manifest.")
+    add_init_arguments(init_parser)
+    init_parser.set_defaults(handler=handle_init)
 
     ports = subparsers.add_parser("ports", help="Manage service port reservations.")
     port_commands = ports.add_subparsers(dest="ports_command", required=True)
@@ -102,7 +128,7 @@ def build_ports_parser() -> argparse.ArgumentParser:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv[:1] == ["ports"]:
+    if argv[:1] in (["ports"], ["init"]) or argv[:1] == ["--version"]:
         return build_ports_parser().parse_args(argv)
     args = build_legacy_parser().parse_args(argv)
     args.handler = handle_apply
@@ -110,7 +136,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return args
 
 
+def result_items(results: list[dict] | dict) -> list[dict]:
+    return results if isinstance(results, list) else [results]
+
+
+def print_env_results(results: list[dict] | dict) -> None:
+    for result in result_items(results):
+        print(f"{result['envVar']}={result['port']}")
+
+
 def print_apply_results(args: argparse.Namespace, results: list[dict] | dict) -> None:
+    if getattr(args, "print_env", False):
+        print_env_results(results)
+        return
+
     if args.json:
         if isinstance(results, list):
             print(json.dumps({"results": results}, indent=2, sort_keys=True))
@@ -155,6 +194,14 @@ def handle_validate(args: argparse.Namespace) -> None:
         print(json.dumps(summary, indent=2, sort_keys=True))
     else:
         print("OK")
+
+
+def handle_init(args: argparse.Namespace) -> None:
+    result = init_manifest(args)
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        print(f"Created {result['created']}")
 
 
 def main(argv: list[str] | None = None) -> None:

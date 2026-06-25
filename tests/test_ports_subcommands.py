@@ -94,7 +94,7 @@ def test_ports_validate_manifest(tmp_path: Path) -> None:
     manifest = write_manifest(tmp_path)
     result = run_cli("ports", "validate", "--config", str(manifest), "--json")
     payload = json.loads(result.stdout)
-    assert payload == {"applicationCount": 2, "mode": "batch", "valid": True}
+    assert payload == {"applicationCount": 2, "envVarCount": 2, "mode": "batch", "valid": True}
 
 
 def test_legacy_batch_still_works(tmp_path: Path) -> None:
