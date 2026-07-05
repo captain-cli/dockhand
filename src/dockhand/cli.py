@@ -22,6 +22,7 @@ from .constants import (
 from .errors import PortAllocationError
 from .init_config import init_manifest
 from .manifest import run_batch, validate_batch_config
+from .servicewright import reconcile_servicewright_config
 from .output import fail
 
 
@@ -99,6 +100,28 @@ def add_init_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--json", action="store_true")
 
 
+
+def add_servicewright_reconcile_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--config", required=True, help="Path to servicewright.json or a multi-service Servicewright config.")
+    parser.add_argument(
+        "--write-config",
+        default=".captain/runtime/servicewright.resolved.json",
+        help="Path for the resolved Servicewright config written after port reconciliation.",
+    )
+    parser.add_argument(
+        "--write-env",
+        default=".captain/runtime/environment",
+        help="Directory for generated per-service env files. Use an empty value to use each service environmentFile path only.",
+    )
+    parser.add_argument("--root", default=None, help="Project root used to resolve relative paths. Defaults to the config directory.")
+    parser.add_argument("--reserved-ports-file", default=None, help="Dockhand reservation file. Defaults to .captain/runtime/dockhand-reserved-ports.json under --root.")
+    parser.add_argument("--project-name", default=None, help="Reservation project namespace. Defaults to config projectName/project or root folder name.")
+    parser.add_argument("--start-port", type=int, default=DEFAULT_START_PORT, help="Default start port when a service runtime omits portRange.")
+    parser.add_argument("--end-port", type=int, default=DEFAULT_END_PORT, help="Default end port when a service runtime omits portRange.")
+    parser.add_argument("--protocol", choices=["tcp", "udp"], default="tcp")
+    parser.add_argument("--dry-run", action="store_true", help="Preview reconciliation without writing config, env, or reservations.")
+    parser.add_argument("--json", action="store_true", help="Print JSON output.")
+
 def build_ports_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="dockhand")
     parser.add_argument("--version", action="version", version=f"dockhand {__version__}")
@@ -107,6 +130,13 @@ def build_ports_parser() -> argparse.ArgumentParser:
     init_parser = subparsers.add_parser("init", help="Create a starter Dockhand manifest.")
     add_init_arguments(init_parser)
     init_parser.set_defaults(handler=handle_init)
+
+    servicewright = subparsers.add_parser("servicewright", help="Reconcile Servicewright runtime config.")
+    servicewright_commands = servicewright.add_subparsers(dest="servicewright_command", required=True)
+
+    reconcile_parser = servicewright_commands.add_parser("reconcile", help="Honor safe Servicewright ports, reassign conflicts, and write resolved runtime config.")
+    add_servicewright_reconcile_arguments(reconcile_parser)
+    reconcile_parser.set_defaults(handler=handle_servicewright_reconcile)
 
     ports = subparsers.add_parser("ports", help="Manage service port reservations.")
     port_commands = ports.add_subparsers(dest="ports_command", required=True)
@@ -128,7 +158,7 @@ def build_ports_parser() -> argparse.ArgumentParser:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv[:1] in (["ports"], ["init"]) or argv[:1] == ["--version"]:
+    if argv[:1] in (["ports"], ["init"], ["servicewright"]) or argv[:1] == ["--version"]:
         return build_ports_parser().parse_args(argv)
     args = build_legacy_parser().parse_args(argv)
     args.handler = handle_apply
@@ -202,6 +232,31 @@ def handle_init(args: argparse.Namespace) -> None:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
         print(f"Created {result['created']}")
+
+
+def handle_servicewright_reconcile(args: argparse.Namespace) -> None:
+    write_env = args.write_env if args.write_env else None
+    result = reconcile_servicewright_config(
+        config_path=args.config,
+        write_config=args.write_config,
+        write_env=write_env,
+        root=args.root,
+        reserved_ports_file=args.reserved_ports_file,
+        project_name=args.project_name,
+        default_start_port=args.start_port,
+        default_end_port=args.end_port,
+        protocol=args.protocol,
+        dry_run=args.dry_run,
+    )
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return
+    action = "Planned" if args.dry_run else "Resolved"
+    print(f"{action} {result['serviceCount']} Servicewright service(s)")
+    for item in result["results"]:
+        requested = item.get("requestedPort")
+        suffix = f" (requested {requested})" if requested and requested != item["port"] else ""
+        print(f"{item['serviceName']}={item['port']}{suffix} - {item['assignmentReason']}")
 
 
 def main(argv: list[str] | None = None) -> None:

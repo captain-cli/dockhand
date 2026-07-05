@@ -1,0 +1,35 @@
+{
+  "projectName": "dockhand-servicewright-example",
+  "services": [
+    {
+      "name": "auth-api",
+      "description": "Authentication API",
+      "type": "system",
+      "user": "app",
+      "workingDirectory": "/opt/example/apis/auth-api",
+      "execStart": "/usr/bin/node /opt/example/apis/auth-api/server.js",
+      "environmentFile": ".captain/runtime/environment/auth-api.env",
+      "runtime": {
+        "host": "0.0.0.0",
+        "port": 6751,
+        "portRange": [6700, 6799],
+        "protocol": "tcp"
+      }
+    },
+    {
+      "name": "media-api",
+      "description": "Media API",
+      "type": "system",
+      "user": "app",
+      "workingDirectory": "/opt/example/apis/media-api",
+      "execStart": "/usr/bin/node /opt/example/apis/media-api/server.js",
+      "environmentFile": ".captain/runtime/environment/media-api.env",
+      "runtime": {
+        "host": "0.0.0.0",
+        "port": 6752,
+        "portRange": [6700, 6799],
+        "protocol": "tcp"
+      }
+    }
+  ]
+}

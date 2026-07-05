@@ -157,6 +157,118 @@ It behaves like:
 dockhand ports apply --config examples/dockhand.json --json
 ```
 
+
+## Servicewright reconciliation
+
+Dockhand can now run before Servicewright in a monorepo deployment pipeline.
+Dockhand reads `servicewright.json`, tries to honor each service's existing
+`runtime.port`, assigns another port if the requested port is unavailable or
+already assigned to another service, then writes a resolved Servicewright config
+plus per-service env files.
+
+Recommended flow:
+
+```text
+Dockhand servicewright reconcile
+  -> .captain/runtime/servicewright.resolved.json
+  -> .captain/runtime/environment/*.env
+Servicewright generate
+  -> systemd_units/*.service
+```
+
+Example Servicewright config committed to the project repo:
+
+```json
+{
+  "projectName": "my-monorepo",
+  "services": [
+    {
+      "name": "auth-api",
+      "description": "Authentication API",
+      "type": "system",
+      "environmentFile": ".captain/runtime/environment/auth-api.env",
+      "runtime": {
+        "host": "0.0.0.0",
+        "port": 6751,
+        "portRange": [6700, 6799]
+      }
+    },
+    {
+      "name": "media-api",
+      "description": "Media API",
+      "type": "system",
+      "environmentFile": ".captain/runtime/environment/media-api.env",
+      "runtime": {
+        "host": "0.0.0.0",
+        "port": 6752,
+        "portRange": [6700, 6799]
+      }
+    }
+  ]
+}
+```
+
+Reconcile it:
+
+```bash
+dockhand servicewright reconcile \
+  --config servicewright.json \
+  --root . \
+  --write-config .captain/runtime/servicewright.resolved.json \
+  --write-env .captain/runtime/environment \
+  --json
+```
+
+Dry-run first:
+
+```bash
+dockhand servicewright reconcile \
+  --config servicewright.json \
+  --write-config .captain/runtime/servicewright.resolved.json \
+  --write-env .captain/runtime/environment \
+  --dry-run \
+  --json
+```
+
+Port resolution rules:
+
+```text
+requested port is free -> keep it
+requested port is already reserved for the same service -> keep it
+requested port is already assigned in this run -> assign next available port
+requested port is unavailable/unowned -> assign next available port
+no requested port -> assign first available port from the service range
+```
+
+Dockhand updates only runtime-owned fields in the resolved config:
+
+```text
+runtime.host
+runtime.port
+runtime.protocol
+runtime.requestedPort, when reassigned
+runtime.assignedBy
+runtime.assignmentReason
+environmentFile, when --write-env is supplied
+```
+
+The generated env file contains:
+
+```env
+SERVICE_NAME=media-api
+HOST=0.0.0.0
+PORT=6752
+```
+
+Then Servicewright consumes the resolved config:
+
+```bash
+servicewright generate \
+  --config .captain/runtime/servicewright.resolved.json \
+  --root . \
+  --output-dir ./systemd_units
+```
+
 ## Optional Captain integration
 
 Captain should treat Dockhand as optional. A project can use Dockhand directly:
