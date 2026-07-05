@@ -25,6 +25,7 @@ dependencies = []
 
 [project.optional-dependencies]
 db = ["mysql-connector-python>=8.0"]
+dev = ["pytest>=8.0"]
 test = ["pytest>=8.0"]
 
 [project.scripts]
