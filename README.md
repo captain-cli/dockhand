@@ -10,7 +10,7 @@ Dockhand is a lightweight, standalone Python CLI for **allocating runtime ports 
 
 Dockhand belongs to the Captain tool family, but **does not require Captain**.
 
-**Status:** v0.2.0 · Alpha · Python 3.9+
+**Status:** v0.2.0 · Alpha · Python 3.10+
 
 ## What Dockhand does
 
