@@ -85,9 +85,22 @@ def normalize_manifest_dict(data: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
-def load_applications_manifest(path: str) -> Dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+def load_applications_manifest(path: str, *, canonical: bool = False) -> Dict[str, Any]:
+    if canonical:
+        from pathlib import Path
+        from captain_core.project_manifest import resolve_tool_config
+
+        project_root = Path(path).resolve()
+        if project_root.is_file():
+            if project_root.name != "manifest.json":
+                fail("--canonical-project requires a project directory or manifest.json")
+            project_root = project_root.parent
+        resolved = resolve_tool_config("dockhand", start=project_root, required=True)
+        assert resolved is not None
+        data = resolved.config
+    else:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
     if not isinstance(data, dict):
         fail("Applications manifest must be a JSON object")
     if "applications" not in data or not isinstance(data["applications"], list):
@@ -122,7 +135,7 @@ def args_with_overrides(base_args: argparse.Namespace, overrides: Dict[str, Any]
 
 
 def iter_merged_application_args(base_args: argparse.Namespace) -> List[argparse.Namespace]:
-    manifest = load_applications_manifest(base_args.applications_file)
+    manifest = load_applications_manifest(base_args.applications_file, canonical=bool(getattr(base_args, "canonical_project", False)))
     top_level = normalize_manifest_dict({k: v for k, v in manifest.items() if k != "applications" and k != "defaults"})
     defaults = normalize_manifest_dict(manifest.get("defaults", {}) or {})
     if not isinstance(defaults, dict):

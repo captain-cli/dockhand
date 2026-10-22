@@ -34,6 +34,8 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     identity.add_argument("--setting-description", default="Dynamically assigned service port")
     identity.add_argument("--applications-file", "--config", dest="applications_file", default=None, help="JSON manifest containing multiple applications/services to allocate ports for.")
 
+    identity.add_argument("--canonical-project", action="store_true", help="Resolve the dockhand section from a Captain project manifest. Use --config PROJECT_DIR or PROJECT_DIR/manifest.json.")
+
     port = parser.add_argument_group("port selection")
     port.add_argument("--start-port", type=int, default=DEFAULT_START_PORT)
     port.add_argument("--end-port", type=int, default=DEFAULT_END_PORT)

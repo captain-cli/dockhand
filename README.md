@@ -169,3 +169,11 @@ The verified development baseline on Ubuntu 22.04 / Python 3.10 was **17 passing
 **Dockhand** handles runtime ports and environment wiring. **Servicewright** consumes resolved configuration to generate service definitions. **Captain** may orchestrate them, but Dockhand is intentionally useful on its own.
 
 **Every service needs a place to dock.** ⚓
+
+### Canonical Captain project manifest
+
+Use `dockhand ports plan --canonical-project --config . --json` to resolve the
+`dockhand` section of the project-root `manifest.json`. The same flag works with
+`ports validate` and `ports apply`. Inline and `manifests.dockhand` split
+configurations are supported through Captain Core; the existing standalone
+`--config path/to/dockhand.json` behavior remains unchanged.
